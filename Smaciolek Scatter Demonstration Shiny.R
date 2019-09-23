@@ -1,27 +1,79 @@
 library(shiny)
+library(plot3D)
+
 ui <- fluidPage(
-  titlePanel("SMaciolek scatter package - demonstration"),
-  sliderInput(inputId="num",
-              label="Choose a number of points",
-              value=25,min=1,max=10000),
-  sliderInput(inputId="res",
-              label="choose a resolution",
-              value=25,min=1,max=250),
-  plotOutput("hist1"),
-  plotOutput("hist2"),
-  plotOutput("hist3")
+    titlePanel("Group2 Binplot Shiny Demonstration"),
+    sidebarLayout(
+        sidebarPanel(
+            sliderInput(inputId="num",
+                        label="Choose a number of points",
+                        value=6000,min=1,max=10000),
+            sliderInput(inputId="res",
+                        label="choose a resolution",
+                        value=100,min=1,max=250),
+            checkboxInput(inputId = "log.transform",
+                          label = "Binplots log10 (counts+1)",
+                          value = F)
+        ),
+
+        mainPanel(
+            fluidRow(
+                column(4, plotOutput("scatterplot")),
+                column(4, plotOutput("binplot")),
+                column(4, plotOutput("3Dplot"))
+            )
+        )
+    )
 )
+
+
 server <- function(input, output) {
-  library(Smaciolekscatter)
-  output$hist1<-renderPlot({
-    TDbinplot(rnorm(input$num),rnorm(input$num),input$res)
-  })
-  output$hist2<-renderPlot({
-  binplot(rnorm(input$num),rnorm(input$num),input$res)
-  })
-  output$hist3<-renderPlot({
-    scatter(rnorm(input$num),rnorm(input$num))
-  })
+
+    # Define scatter plot function
+    scatter <- function(x,y) {
+        plot(x,y,main="Scatter Plot",
+             xlab = "X", ylab = "Y")
+    }
+
+    # Define binplot function
+    binplot <- function(x,y,res, log.transform = F) {
+        nc <- res
+        nr <- res
+        zx = c(1:nr,rep(1,nc),1+trunc( nr*(x- min(x))/(max(x)-min(x)) ))
+        zx[zx>nr] = nr
+        zy = c(rep(1,nr),1:nc,1+trunc( nc*(y- min(y))/(max(y)-min(y)) ))
+        zy[zy>nc] = nc
+        z = table(zx,zy); z[,1]=z[,1]-1; z[1,]=z[1,]-1;
+        if (log.transform == T) { z = log10(z + 1) }
+        image(z=t(z),x=seq(length=nr+1,from=min(x),to=max(x)),
+              y= seq(length=nc+1,from=min(y),to=max(y)),
+              xlab="X",ylab="Y", col=topo.colors(100),
+              main="Binned scatter plot")
+    }
+
+
+    # Define 3-D plot
+    TDbinplot <- function (x,y,res, log.transform = F){
+        xc <- cut(x,res)
+        yc <- cut(y,res)
+        z = table(xc,yc)
+        if (log.transform == T) { z = log10(z + 1) }
+        hist3D(z=z, border="black",main="3D binned plot",
+               xlab = "X", ylab = "Y", zlab = "counts")
+    }
+
+
+    # Generate output
+    output$scatterplot<-renderPlot({
+        scatter(rnorm(input$num),rnorm(input$num))
+    })
+    output$binplot<-renderPlot({
+        binplot(rnorm(input$num),rnorm(input$num),input$res, input$log.transform)
+    })
+    output$`3Dplot`<-renderPlot({
+        TDbinplot(rnorm(input$num),rnorm(input$num),input$res, input$log.transform)
+    })
 }
 
 shinyApp(ui = ui, server = server)
+
