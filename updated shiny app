@@ -1,5 +1,6 @@
 library(shiny)
 library(plot3D)
+library(ggplot2)
 
 ui <- fluidPage(
     titlePanel("Group2 Binplot Shiny Demonstration"),
